@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Práctica Arduino — Sensor de Distancia HC-SR04</title>
+<style>
+  :root {
+    --azul:    #1A6BB5;
+    --azul-cl: #E6F1FB;
+    --azul-b:  #0C447C;
+    --verde:   #3B6D11;
+    --verde-cl:#EAF3DE;
+    --verde-b: #27500A;
+    --ambar:   #BA7517;
+    --ambar-cl:#FAEEDA;
+    --ambar-b: #633806;
+    --rojo:    #A32D2D;
+    --rojo-cl: #FCEBEB;
+    --gris:    #5F5E5A;
+    --gris-cl: #F1EFE8;
+    --gris-b:  #2C2C2A;
+    --txt:     #1a1a18;
+    --txt2:    #5F5E5A;
+    --bg:      #ffffff;
+    --bg2:     #F8F7F4;
+    --borde:   rgba(0,0,0,0.10);
+    --r:       10px;
+    --sombra:  0 2px 12px rgba(0,0,0,0.07);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 15px; line-height: 1.65;
+    background: var(--bg2); color: var(--txt);
+    padding: 0 0 60px;
+  }
+
+  /* HERO */
+  .hero {
+    background: var(--azul-b);
+    padding: 36px 32px 28px;
+    color: white;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.12);
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 12px; letter-spacing: .04em; margin-bottom: 14px;
+  }
+  .hero h1 { font-size: 26px; font-weight: 600; margin-bottom: 6px; }
+  .hero p  { font-size: 14px; opacity: .75; max-width: 560px; }
+  .hero-chips { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .chip {
+    background: rgba(255,255,255,0.15);
+    padding: 4px 12px; border-radius: 20px; font-size: 12px;
+  }
+
+  /* MAIN */
+  .container { max-width: 860px; margin: 0 auto; padding: 0 20px; }
+
+  /* SECCIÓN INFO */
+  .info-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+    gap: 14px; margin: 28px 0;
+  }
+  .info-card {
+    background: var(--bg); border: 1px solid var(--borde);
+    border-radius: var(--r); padding: 16px 18px;
+  }
+  .info-card .label { font-size: 11px; color: var(--txt2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+  .info-card .val   { font-size: 18px; font-weight: 600; color: var(--azul-b); }
+
+  /* OBJETIVOS */
+  .section { margin: 32px 0 0; }
+  .section-title {
+    font-size: 13px; font-weight: 600; letter-spacing: .06em;
+    color: var(--txt2); text-transform: uppercase; margin-bottom: 12px;
+  }
+  .obj-list { display: flex; flex-direction: column; gap: 8px; }
+  .obj-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: var(--bg); border: 1px solid var(--borde);
+    border-radius: var(--r); padding: 12px 14px;
+  }
+  .obj-icon {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; margin-top: 1px;
+  }
+  .obj-icon.azul  { background: var(--azul-cl); color: var(--azul-b); }
+  .obj-icon.verde { background: var(--verde-cl); color: var(--verde-b); }
+  .obj-icon.ambar { background: var(--ambar-cl); color: var(--ambar-b); }
+
+  /* COMPONENTES */
+  .comp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px,1fr)); gap: 12px; }
+  .comp-card {
+    background: var(--bg); border: 1px solid var(--borde);
+    border-radius: var(--r); padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .comp-icon { font-size: 24px; margin-bottom: 4px; }
+  .comp-name { font-weight: 600; font-size: 14px; }
+  .comp-qty  { font-size: 12px; color: var(--txt2); }
+  .comp-note { font-size: 12px; color: var(--azul); margin-top: 2px; }
+
+  /* STEPPER */
+  .stepper { margin-top: 28px; }
+  .step-nav {
+    display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .step-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 2px solid var(--borde); background: var(--bg);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    color: var(--txt2); transition: all .2s; position: relative;
+  }
+  .step-btn:hover { border-color: var(--azul); color: var(--azul); }
+  .step-btn.active { background: var(--azul-b); border-color: var(--azul-b); color: white; }
+  .step-btn.done { background: var(--verde-cl); border-color: var(--verde); color: var(--verde-b); }
+
+  .step-panel { display: none; }
+  .step-panel.active { display: block; }
+
+  .step-header {
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 18px;
+  }
+  .step-num {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--azul-b); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; flex-shrink: 0;
+  }
+  .step-title { font-size: 20px; font-weight: 600; }
+  .step-sub   { font-size: 13px; color: var(--txt2); margin-top: 2px; }
+
+  /* CIRCUITO SVG */
+  .circuit-wrap {
+    background: var(--bg); border: 1px solid var(--borde);
+    border-radius: var(--r); padding: 16px; margin: 18px 0;
+    overflow-x: auto;
+  }
+  .circuit-title {
+    font-size: 12px; color: var(--txt2); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .circuit-title span { background: var(--azul-cl); color: var(--azul-b); padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+
+  /* INSTRUCCIONES */
+  .instructions { display: flex; flex-direction: column; gap: 10px; margin: 14px 0; }
+  .instr {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: var(--bg); border: 1px solid var(--borde);
+    border-radius: var(--r); padding: 12px 14px;
+  }
+  .instr-num {
+    min-width: 24px; height: 24px; border-radius: 50%;
+    background: var(--azul-b); color: white;
+    font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .instr strong { color: var(--azul-b); }
+
+  /* TABLA DE CONEXIONES */
+  .conn-table {
+    width: 100%; border-collapse: collapse; margin: 14px 0;
+    font-size: 13px;
+  }
+  .conn-table th {
+    background: var(--gris-cl); padding: 8px 12px;
+    text-align: left; font-weight: 600;
+    border-bottom: 2px solid var(--borde);
+  }
+  .conn-table td {
+    padding: 8px 12px; border-bottom: 1px solid var(--borde);
+    background: var(--bg);
+  }
+  .conn-table tr:last-child td { border-bottom: none; }
+  .pin-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+  }
+  .pin-vcc  { background: #FEECEC; color: #A32D2D; }
+  .pin-gnd  { background: #2C2C2A; color: #E8E6DF; }
+  .pin-dig  { background: var(--azul-cl); color: var(--azul-b); }
+  .pin-pwm  { background: var(--verde-cl); color: var(--verde-b); }
+
+  /* CÓDIGO */
+  .code-wrap {
+    background: #1e1e1e; border-radius: var(--r);
+    padding: 18px 20px; margin: 14px 0;
+    overflow-x: auto; position: relative;
+  }
+  .code-wrap pre {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    font-size: 13px; line-height: 1.7; color: #D4D4D4;
+    white-space: pre;
+  }
+  .c-comment { color: #6A9955; }
+  .c-keyword { color: #569CD6; }
+  .c-type    { color: #4EC9B0; }
+  .c-num     { color: #B5CEA8; }
+  .c-func    { color: #DCDCAA; }
+  .c-str     { color: #CE9178; }
+  .c-const   { color: #9CDCFE; }
+
+  /* ALERTS */
+  .alert {
+    border-radius: var(--r); padding: 12px 16px; margin: 14px 0;
+    border-left: 4px solid; display: flex; gap: 10px; align-items: flex-start;
+  }
+  .alert-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .alert p { font-size: 13px; line-height: 1.55; }
+  .alert p strong { display: block; margin-bottom: 2px; }
+  .alert.info  { background: var(--azul-cl); border-color: var(--azul); }
+  .alert.warn  { background: var(--ambar-cl); border-color: var(--ambar); }
+  .alert.ok    { background: var(--verde-cl); border-color: var(--verde); }
+  .alert.rojo  { background: var(--rojo-cl); border-color: var(--rojo); }
+
+  /* VERIFICACIÓN interactiva */
+  .verify-list { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
+  .verify-item {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--bg); border: 1px solid var(--borde);
+    border-radius: var(--r); padding: 11px 14px; cursor: pointer;
+    user-select: none; transition: border-color .15s;
+  }
+  .verify-item:hover { border-color: var(--azul); }
+  .verify-item.checked { border-color: var(--verde); background: var(--verde-cl); }
+  .verify-cb {
+    width: 20px; height: 20px; border-radius: 5px;
+    border: 2px solid var(--borde); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; background: var(--bg);
+    transition: all .15s;
+  }
+  .verify-item.checked .verify-cb {
+    background: var(--verde); border-color: var(--verde); color: white;
+  }
+  .verify-text { font-size: 13px; }
+
+  /* AMPLIACION */
+  .amp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 12px; margin: 14px 0; }
+  .amp-card {
+    background: var(--bg); border: 1px solid var(--borde);
+    border-radius: var(--r); padding: 14px 16px;
+  }
+  .amp-card h4 { font-size: 14px; font-weight: 600; color: var(--azul-b); margin-bottom: 6px; }
+  .amp-card p  { font-size: 13px; color: var(--txt2); }
+
+  /* FOOTER NAV */
+  .step-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--borde);
+  }
+  .btn {
+    padding: 9px 20px; border-radius: var(--r);
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    border: 1px solid var(--borde); transition: all .15s;
+  }
+  .btn-prim  { background: var(--azul-b); color: white; border-color: var(--azul-b); }
+  .btn-prim:hover { background: var(--azul); }
+  .btn-sec   { background: var(--bg); color: var(--txt); }
+  .btn-sec:hover { background: var(--gris-cl); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .progress-bar {
+    height: 4px; background: var(--borde); border-radius: 2px; margin: 0 0 24px;
+  }
+  .progress-fill {
+    height: 100%; background: var(--azul-b); border-radius: 2px; transition: width .3s;
+  }
+
+  @media (max-width: 600px) {
+    .hero { padding: 24px 16px 20px; }
+    .hero h1 { font-size: 20px; }
+    .container { padding: 0 14px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-badge">🤖 Arduino · 1r Bachillerato</div>
+  <h1>Sensor de distancia HC-SR04</h1>
+  <p>Aprende a medir distancias y actuar sobre un LED y un buzzer según la proximidad de un objeto.</p>
+  <div class="hero-chips">
+    <div class="chip">⏱ 60–80 min</div>
+    <div class="chip">📶 Nivel: iniciación</div>
+    <div class="chip">🔧 HC-SR04 + LED + Buzzer</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="label">Asignatura</div>
+      <div class="val" style="font-size:14px">Tecnología y Digitalización</div>
+    </div>
+    <div class="info-card">
+      <div class="label">Sesiones</div>
+      <div class="val">1 – 2 sesiones</div>
+    </div>
+    <div class="info-card">
+      <div class="label">Pasos</div>
+      <div class="val">6 pasos guiados</div>
+    </div>
+  </div>
+
+  <!-- OBJETIVOS -->
+  <div class="section">
+    <div class="section-title">Objetivos de aprendizaje</div>
+    <div class="obj-list">
+      <div class="obj-item">
+        <div class="obj-icon azul">1</div>
+        <div>Entender cómo funciona un sensor ultrasónico HC-SR04 y cómo mide distancias.</div>
+      </div>
+      <div class="obj-item">
+        <div class="obj-icon azul">2</div>
+        <div>Utilizar las funciones <code>pulseIn()</code> y <code>digitalWrite()</code> para leer el sensor y controlar actuadores.</div>
+      </div>
+      <div class="obj-item">
+        <div class="obj-icon verde">3</div>
+        <div>Usar estructuras condicionales (<code>if / else if / else</code>) para tomar decisiones en función de la distancia medida.</div>
+      </div>
+      <div class="obj-item">
+        <div class="obj-icon ambar">4</div>
+        <div>Combinar un LED y un buzzer para dar retroalimentación visual y sonora según la proximidad del objeto.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPONENTES -->
+  <div class="section">
+    <div class="section-title">Materiales necesarios</div>
+    <div class="comp-grid">
+      <div class="comp-card">
+        <div class="comp-icon">🔵</div>
+        <div class="comp-name">Arduino UNO</div>
+        <div class="comp-qty">× 1</div>
+        <div class="comp-note">+ cable USB</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon">📡</div>
+        <div class="comp-name">HC-SR04</div>
+        <div class="comp-qty">× 1</div>
+        <div class="comp-note">Sensor ultrasónico</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon">💡</div>
+        <div class="comp-name">LED rojo</div>
+        <div class="comp-qty">× 1</div>
+        <div class="comp-note">Cualquier color</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon">🔔</div>
+        <div class="comp-name">Buzzer pasivo</div>
+        <div class="comp-qty">× 1</div>
+        <div class="comp-note">Activo también vale</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon">🟫</div>
+        <div class="comp-name">Resistencia 220 Ω</div>
+        <div class="comp-qty">× 1</div>
+        <div class="comp-note">Para el LED</div>
+      </div>
+      <div class="comp-card">
+        <div class="comp-icon">🟦</div>
+        <div class="comp-name">Protoboard + cables</div>
+        <div class="comp-qty">× 1 set</div>
+        <div class="comp-note">Macho-macho y macho-hembra</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEPPER -->
+  <div class="section stepper">
+    <div class="section-title">Pasos de la práctica</div>
+    <div class="step-nav" id="stepNav">
+      <button class="step-btn active" onclick="goStep(0)">1</button>
+      <button class="step-btn" onclick="goStep(1)">2</button>
+      <button class="step-btn" onclick="goStep(2)">3</button>
+      <button class="step-btn" onclick="goStep(3)">4</button>
+      <button class="step-btn" onclick="goStep(4)">5</button>
+      <button class="step-btn" onclick="goStep(5)">6</button>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:16%"></div></div>
+
+    <!-- ═══ PASO 1 ═══ -->
+    <div class="step-panel active" id="panel-0">
+      <div class="step-header">
+        <div class="step-num">1</div>
+        <div>
+          <div class="step-title">¿Cómo funciona el HC-SR04?</div>
+          <div class="step-sub">Entender antes de conectar</div>
+        </div>
+      </div>
+
+      <div class="alert info">
+        <div class="alert-icon">📡</div>
+        <p><strong>El sensor ultrasónico</strong> funciona como el sonar de un murciélago: emite un pulso de sonido y mide cuánto tarda en volver. Con ese tiempo, Arduino calcula la distancia.</p>
+      </div>
+
+      <!-- Diagrama funcionamiento -->
+      <div class="circuit-wrap">
+        <div class="circuit-title"><span>Principio de funcionamiento</span></div>
+        <svg width="100%" viewBox="0 0 680 200" role="img">
+          <title>Diagrama de funcionamiento del sensor HC-SR04</title>
+          <desc>El sensor emite un pulso ultrasónico, este rebota en el objeto y regresa al sensor. Arduino mide el tiempo para calcular la distancia.</desc>
+          <defs>
+            <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+          <!-- Arduino -->
+          <rect x="20" y="60" width="110" height="80" rx="8" fill="#1A6BB5" fill-opacity=".12" stroke="#1A6BB5" stroke-width="1.2"/>
+          <text x="75" y="96" text-anchor="middle" font-size="13" font-weight="600" fill="#0C447C" font-family="system-ui">Arduino</text>
+          <text x="75" y="114" text-anchor="middle" font-size="11" fill="#3B6D11" font-family="system-ui">✓ envía TRIG</text>
+          <text x="75" y="129" text-anchor="middle" font-size="11" fill="#BA7517" font-family="system-ui">✓ lee ECHO</text>
+          <!-- Sensor -->
+          <rect x="200" y="52" width="120" height="96" rx="8" fill="#EAF3DE" stroke="#3B6D11" stroke-width="1.2"/>
+          <text x="260" y="90" text-anchor="middle" font-size="13" font-weight="600" fill="#27500A" font-family="system-ui">HC-SR04</text>
+          <ellipse cx="232" cy="110" rx="12" ry="14" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/>
+          <ellipse cx="288" cy="110" rx="12" ry="14" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/>
+          <text x="232" y="114" text-anchor="middle" font-size="9" fill="#5F5E5A" font-family="system-ui">T</text>
+          <text x="288" y="114" text-anchor="middle" font-size="9" fill="#5F5E5A" font-family="system-ui">R</text>
+          <!-- Objeto -->
+          <rect x="530" y="70" width="60" height="60" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.2"/>
+          <text x="560" y="104" text-anchor="middle" font-size="12" fill="#633806" font-family="system-ui">Objeto</text>
+          <!-- Pulso ida -->
+          <path d="M325 95 Q430 60 530 95" fill="none" stroke="#1A6BB5" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arr)"/>
+          <text x="428" y="65" text-anchor="middle" font-size="11" fill="#1A6BB5" font-family="system-ui">Pulso ultrasónico</text>
+          <!-- Eco vuelta -->
+          <path d="M530 110 Q430 150 325 110" fill="none" stroke="#A32D2D" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#arr)"/>
+          <text x="428" y="162" text-anchor="middle" font-size="11" fill="#A32D2D" font-family="system-ui">Eco de vuelta</text>
+          <!-- Tiempo -->
+          <text x="428" y="185" text-anchor="middle" font-size="10" fill="#5F5E5A" font-family="system-ui">distancia (cm) = tiempo (µs) ÷ 58</text>
+        </svg>
+      </div>
+
+      <div class="instructions">
+        <div class="instr">
+          <div class="instr-num">1</div>
+          <div>El pin <strong>TRIG</strong> (trigger) es la salida: Arduino envía un pulso de 10 microsegundos para activar el sensor.</div>
+        </div>
+        <div class="instr">
+          <div class="instr-num">2</div>
+          <div>El pin <strong>ECHO</strong> es la entrada: se queda en HIGH mientras el sonido viaja y vuelve. <code>pulseIn()</code> mide ese tiempo en microsegundos.</div>
+        </div>
+        <div class="instr">
+          <div class="instr-num">3</div>
+          <div>La fórmula para convertir el tiempo en centímetros es: <strong>distancia = tiempo ÷ 58</strong> (el sonido va y vuelve a ~340 m/s).</div>
+        </div>
+      </div>
+
+      <div class="alert warn">
+        <div class="alert-icon">⚠️</div>
+        <p><strong>Rango del sensor:</strong> El HC-SR04 mide de 2 cm a 400 cm. Por debajo de 2 cm puede dar lecturas erróneas. Tenlo en cuenta al probar.</p>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn btn-sec" disabled>← Anterior</button>
+        <button class="btn btn-prim" onclick="goStep(1)">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- ═══ PASO 2 ═══ -->
+    <div class="step-panel" id="panel-1">
+      <div class="step-header">
+        <div class="step-num">2</div>
+        <div>
+          <div class="step-title">Conectar el circuito</div>
+          <div class="step-sub">HC-SR04 + LED + Buzzer en la protoboard</div>
+        </div>
+      </div>
+
+      <div class="alert info">
+        <div class="alert-icon">🔌</div>
+        <p><strong>Antes de conectar nada:</strong> desconecta el cable USB de Arduino. Siempre monta el circuito sin corriente para evitar cortocircuitos.</p>
+      </div>
+
+      <!-- Diagrama circuito -->
+      <div class="circuit-wrap">
+        <div class="circuit-title"><span>Esquema de conexiones</span></div>
+        <svg width="100%" viewBox="0 0 680 340" role="img">
+          <title>Esquema de conexiones del circuito con HC-SR04, LED y buzzer</title>
+          <desc>Arduino UNO conectado al sensor HC-SR04, un LED rojo con resistencia de 220 ohmios en el pin 12, y un buzzer en el pin 11.</desc>
+          <defs>
+            <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+
+          <!-- Arduino board -->
+          <rect x="20" y="30" width="200" height="280" rx="10" fill="#1A6BB5" fill-opacity=".08" stroke="#1A6BB5" stroke-width="1.5"/>
+          <text x="120" y="52" text-anchor="middle" font-size="13" font-weight="700" fill="#0C447C" font-family="system-ui">Arduino UNO</text>
+          <!-- Pines -->
+          <rect x="30" y="65" width="90" height="220" rx="4" fill="white" stroke="#1A6BB5" stroke-width=".5" stroke-opacity=".4"/>
+          <!-- pin labels -->
+          <text x="80" y="84"  text-anchor="middle" font-size="10" fill="#0C447C" font-family="system-ui" font-weight="600">5V</text>
+          <text x="80" y="108" text-anchor="middle" font-size="10" fill="#2C2C2A" font-family="system-ui" font-weight="600">GND</text>
+          <text x="80" y="132" text-anchor="middle" font-size="10" fill="#1A6BB5" font-family="system-ui" font-weight="600">Pin 9 (TRIG)</text>
+          <text x="80" y="156" text-anchor="middle" font-size="10" fill="#1A6BB5" font-family="system-ui" font-weight="600">Pin 10 (ECHO)</text>
+          <text x="80" y="180" text-anchor="middle" font-size="10" fill="#1A6BB5" font-family="system-ui" font-weight="600">Pin 12 (LED)</text>
+          <text x="80" y="204" text-anchor="middle" font-size="10" fill="#3B6D11" font-family="system-ui" font-weight="600">Pin 11 (BUZZER)</text>
+
+          <!-- Separadores finos -->
+          <line x1="30" y1="92"  x2="120" y2="92"  stroke="#1A6BB5" stroke-width=".4" stroke-opacity=".3"/>
+          <line x1="30" y1="116" x2="120" y2="116" stroke="#1A6BB5" stroke-width=".4" stroke-opacity=".3"/>
+          <line x1="30" y1="140" x2="120" y2="140" stroke="#1A6BB5" stroke-width=".4" stroke-opacity=".3"/>
+          <line x1="30" y1="164" x2="120" y2="164" stroke="#1A6BB5" stroke-width=".4" stroke-opacity=".3"/>
+          <line x1="30" y1="188" x2="120" y2="188" stroke="#1A6BB5" stroke-width=".4" stroke-opacity=".3"/>
+
+          <!-- Puntos de conexión -->
+          <circle cx="120" cy="80"  r="4" fill="#A32D2D"/>
+          <circle cx="120" cy="104" r="4" fill="#2C2C2A"/>
+          <circle cx="120" cy="128" r="4" fill="#1A6BB5"/>
+          <circle cx="120" cy="152" r="4" fill="#1A6BB5"/>
+          <circle cx="120" cy="176" r="4" fill="#1A6BB5"/>
+          <circle cx="120" cy="200" r="4" fill="#3B6D11"/>
+
+          <!-- HC-SR04 -->
+          <rect x="290" y="40" width="160" height="90" rx="8" fill="#EAF3DE" stroke="#3B6D11" stroke-width="1.5"/>
+          <text x="370" y="62" text-anchor="middle" font-size="12" font-weight="700" fill="#27500A" font-family="system-ui">HC-SR04</text>
+          <ellipse cx="326" cy="92" rx="16" ry="18" fill="white" stroke="#5F5E5A" stroke-width="1"/>
+          <ellipse cx="414" cy="92" rx="16" ry="18" fill="white" stroke="#5F5E5A" stroke-width="1"/>
+          <text x="326" y="97" text-anchor="middle" font-size="9" fill="#5F5E5A" font-family="system-ui">Trig</text>
+          <text x="414" y="97" text-anchor="middle" font-size="9" fill="#5F5E5A" font-family="system-ui">Echo</text>
+          <!-- Pines sensor labels -->
+          <text x="301" y="73" text-anchor="middle" font-size="8" fill="#A32D2D" font-family="system-ui" font-weight="700">VCC</text>
+          <text x="331" y="73" text-anchor="middle" font-size="8" fill="#1A6BB5" font-family="system-ui" font-weight="700">TRIG</text>
+          <text x="361" y="73" text-anchor="middle" font-size="8" fill="#1A6BB5" font-family="system-ui" font-weight="700">ECHO</text>
+          <text x="391" y="73" text-anchor="middle" font-size="8" fill="#2C2C2A" font-family="system-ui" font-weight="700">GND</text>
+
+          <!-- LED -->
+          <circle cx="330" cy="200" r="16" fill="#FEECEC" stroke="#A32D2D" stroke-width="1.5"/>
+          <text x="330" y="205" text-anchor="middle" font-size="11" font-weight="700" fill="#A32D2D" font-family="system-ui">LED</text>
+          <rect x="308" y="222" width="44" height="10" rx="3" fill="#BA7517" fill-opacity=".3" stroke="#BA7517" stroke-width="1"/>
+          <text x="330" y="231" text-anchor="middle" font-size="8" fill="#633806" font-family="system-ui">220Ω</text>
+
+          <!-- Buzzer -->
+          <rect x="400" y="185" width="80" height="40" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+          <text x="440" y="210" text-anchor="middle" font-size="11" font-weight="700" fill="#633806" font-family="system-ui">Buzzer</text>
+
+          <!-- GND rail -->
+          <rect x="230" y="295" width="380" height="8" rx="3" fill="#2C2C2A" fill-opacity=".25" stroke="#2C2C2A" stroke-width=".8"/>
+          <text x="420" y="321" text-anchor="middle" font-size="10" fill="#2C2C2A" font-family="system-ui">Rail GND (protoboard)</text>
+
+          <!-- Cables -->
+          <!-- 5V → VCC sensor -->
+          <path d="M120 80 L290 80 L290 68" fill="none" stroke="#A32D2D" stroke-width="1.8" marker-end="url(#arr2)"/>
+          <!-- GND → GND sensor -->
+          <path d="M120 104 L230 104 L230 299" fill="none" stroke="#2C2C2A" stroke-width="1.8"/>
+          <path d="M390 299 L390 68" fill="none" stroke="#2C2C2A" stroke-width="1.8" marker-end="url(#arr2)"/>
+          <!-- GND → LED (abajo) -->
+          <path d="M330 232 L330 299" fill="none" stroke="#2C2C2A" stroke-width="1.8"/>
+          <!-- GND → Buzzer -->
+          <path d="M480 225 L480 299" fill="none" stroke="#2C2C2A" stroke-width="1.8"/>
+          <!-- Pin9 → TRIG -->
+          <path d="M120 128 L290 128 L290 130" fill="none" stroke="#1A6BB5" stroke-width="1.8"/>
+          <path d="M330 130 L330 68" fill="none" stroke="#1A6BB5" stroke-width="1.8" marker-end="url(#arr2)"/>
+          <!-- Pin10 → ECHO -->
+          <path d="M120 152 L360 152 L360 68" fill="none" stroke="#1A6BB5" stroke-width="1.8" marker-end="url(#arr2)"/>
+          <!-- Pin12 → LED -->
+          <path d="M120 176 L270 176 L270 200 L314 200" fill="none" stroke="#1A6BB5" stroke-width="1.8" marker-end="url(#arr2)"/>
+          <!-- Pin11 → Buzzer -->
+          <path d="M120 200 L400 200 L400 185" fill="none" stroke="#3B6D11" stroke-width="1.8" marker-end="url(#arr2)"/>
+
+          <!-- Leyenda colores -->
+          <rect x="530" y="40" width="12" height="3" fill="#A32D2D" rx="1"/>
+          <text x="548" y="46" font-size="10" fill="#A32D2D" font-family="system-ui">5V / VCC</text>
+          <rect x="530" y="56" width="12" height="3" fill="#2C2C2A" rx="1"/>
+          <text x="548" y="62" font-size="10" fill="#2C2C2A" font-family="system-ui">GND</text>
+          <rect x="530" y="72" width="12" height="3" fill="#1A6BB5" rx="1"/>
+          <text x="548" y="78" font-size="10" fill="#1A6BB5" font-family="system-ui">Señal digital</text>
+          <rect x="530" y="88" width="12" height="3" fill="#3B6D11" rx="1"/>
+          <text x="548" y="94" font-size="10" fill="#3B6D11" font-family="system-ui">PWM / buzzer</text>
+        </svg>
+      </div>
+
+      <!-- Tabla conexiones -->
+      <table class="conn-table">
+        <thead>
+          <tr>
+            <th>Componente</th>
+            <th>Pin del componente</th>
+            <th>→</th>
+            <th>Arduino</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td rowspan="4">HC-SR04</td>
+            <td>VCC</td><td>→</td>
+            <td><span class="pin-badge pin-vcc">5V</span></td>
+          </tr>
+          <tr>
+            <td>GND</td><td>→</td>
+            <td><span class="pin-badge pin-gnd">GND</span></td>
+          </tr>
+          <tr>
+            <td>TRIG</td><td>→</td>
+            <td><span class="pin-badge pin-dig">Pin 9</span></td>
+          </tr>
+          <tr>
+            <td>ECHO</td><td>→</td>
+            <td><span class="pin-badge pin-dig">Pin 10</span></td>
+          </tr>
+          <tr>
+            <td>LED rojo</td>
+            <td>Ánodo (+, pata larga) → resistencia 220Ω → pin<br>Cátodo (−, pata corta) → GND</td>
+            <td>→</td>
+            <td><span class="pin-badge pin-dig">Pin 12</span></td>
+          </tr>
+          <tr>
+            <td>Buzzer</td>
+            <td>+ (pin positivo)</td>
+            <td>→</td>
+            <td><span class="pin-badge pin-dig">Pin 11</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="alert warn">
+        <div class="alert-icon">⚠️</div>
+        <p><strong>No olvides la resistencia del LED.</strong> Sin ella, el LED puede quemarse y dañar el pin de Arduino. La resistencia de 220Ω es obligatoria.</p>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn btn-sec" onclick="goStep(0)">← Anterior</button>
+        <button class="btn btn-prim" onclick="goStep(2)">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- ═══ PASO 3 ═══ -->
+    <div class="step-panel" id="panel-2">
+      <div class="step-header">
+        <div class="step-num">3</div>
+        <div>
+          <div class="step-title">Código parte 1: leer la distancia</div>
+          <div class="step-sub">Primero solo el sensor, sin actuar sobre nada</div>
+        </div>
+      </div>
+
+      <div class="alert info">
+        <div class="alert-icon">💡</div>
+        <p><strong>Estrategia:</strong> Vamos por partes. Primero comprobamos que el sensor funciona y que leemos bien la distancia. Después añadimos el LED y el buzzer.</p>
+      </div>
+
+      <div class="code-wrap">
+<pre><span class="c-comment">// ─── Práctica HC-SR04 — Paso 1: leer distancia ───────────────────</span>
+
+<span class="c-comment">// 1. Definimos los pines del sensor</span>
+<span class="c-keyword">const int</span> <span class="c-const">TRIG</span> = <span class="c-num">9</span>;   <span class="c-comment">// Pin de disparo (salida)</span>
+<span class="c-keyword">const int</span> <span class="c-const">ECHO</span> = <span class="c-num">10</span>;  <span class="c-comment">// Pin de eco      (entrada)</span>
+
+<span class="c-keyword">void</span> <span class="c-func">setup</span>() {
+  <span class="c-func">pinMode</span>(<span class="c-const">TRIG</span>, OUTPUT);  <span class="c-comment">// TRIG es una salida</span>
+  <span class="c-func">pinMode</span>(<span class="c-const">ECHO</span>, INPUT);   <span class="c-comment">// ECHO es una entrada</span>
+  <span class="c-func">Serial</span>.<span class="c-func">begin</span>(<span class="c-num">9600</span>);     <span class="c-comment">// Abrimos el Monitor Serie</span>
+}
+
+<span class="c-keyword">void</span> <span class="c-func">loop</span>() {
+
+  <span class="c-comment">// 2. Enviamos el pulso de disparo</span>
+  <span class="c-func">digitalWrite</span>(<span class="c-const">TRIG</span>, LOW);
+  <span class="c-func">delayMicroseconds</span>(<span class="c-num">2</span>);            <span class="c-comment">// Limpiamos el pin</span>
+  <span class="c-func">digitalWrite</span>(<span class="c-const">TRIG</span>, HIGH);
+  <span class="c-func">delayMicroseconds</span>(<span class="c-num">10</span>);           <span class="c-comment">// Pulso de 10 microsegundos</span>
+  <span class="c-func">digitalWrite</span>(<span class="c-const">TRIG</span>, LOW);
+
+  <span class="c-comment">// 3. Medimos el tiempo que tarda en volver el eco (en microsegundos)</span>
+  <span class="c-type">long</span> <span class="c-const">duracion</span> = <span class="c-func">pulseIn</span>(<span class="c-const">ECHO</span>, HIGH);
+
+  <span class="c-comment">// 4. Convertimos el tiempo en distancia (cm)</span>
+  <span class="c-type">long</span> <span class="c-const">distancia</span> = duracion / <span class="c-num">58</span>;
+
+  <span class="c-comment">// 5. Mostramos la distancia en el Monitor Serie</span>
+  Serial.<span class="c-func">print</span>(<span class="c-str">"Distancia: "</span>);
+  Serial.<span class="c-func">print</span>(distancia);
+  Serial.<span class="c-func">println</span>(<span class="c-str">" cm"</span>);
+
+  <span class="c-func">delay</span>(<span class="c-num">200</span>);  <span class="c-comment">// Esperamos 200 ms antes de la siguiente medida</span>
+}</pre>
+      </div>
+
+      <div class="instructions">
+        <div class="instr">
+          <div class="instr-num">1</div>
+          <div>Copia el código en el IDE de Arduino y súbelo a la placa.</div>
+        </div>
+        <div class="instr">
+          <div class="instr-num">2</div>
+          <div>Abre el <strong>Monitor Serie</strong> (botón lupa arriba a la derecha, o Ctrl+Mayús+M). Asegúrate de que la velocidad está en <strong>9600 baudios</strong>.</div>
+        </div>
+        <div class="instr">
+          <div class="instr-num">3</div>
+          <div>Acerca y aleja la mano del sensor. Deberías ver cómo cambia el valor de distancia en el monitor.</div>
+        </div>
+      </div>
+
+      <div class="alert ok">
+        <div class="alert-icon">✅</div>
+        <p><strong>¿Funciona?</strong> Si ves valores de distancia que cambian al mover la mano, ¡el sensor está funcionando! Si siempre da 0 o valores muy grandes, revisa las conexiones TRIG/ECHO.</p>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn btn-sec" onclick="goStep(1)">← Anterior</button>
+        <button class="btn btn-prim" onclick="goStep(3)">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- ═══ PASO 4 ═══ -->
+    <div class="step-panel" id="panel-3">
+      <div class="step-header">
+        <div class="step-num">4</div>
+        <div>
+          <div class="step-title">Código parte 2: añadir LED y buzzer</div>
+          <div class="step-sub">Actuar según la distancia medida</div>
+        </div>
+      </div>
+
+      <div class="alert info">
+        <div class="alert-icon">🎯</div>
+        <p><strong>Lógica del programa:</strong> Vamos a crear tres zonas de distancia. Según en qué zona esté el objeto, el LED y el buzzer se comportarán de forma diferente.</p>
+      </div>
+
+      <!-- Diagrama zonas -->
+      <div class="circuit-wrap">
+        <div class="circuit-title"><span>Zonas de distancia</span></div>
+        <svg width="100%" viewBox="0 0 680 130" role="img">
+          <title>Diagrama de zonas de distancia</title>
+          <desc>Tres zonas: verde más de 30 cm sin alarma, amarilla de 10 a 30 cm LED parpadea, roja menos de 10 cm LED y buzzer activos.</desc>
+          <!-- Zona verde -->
+          <rect x="30" y="40" width="210" height="54" rx="8" fill="#EAF3DE" stroke="#3B6D11" stroke-width="1.2"/>
+          <text x="135" y="64" text-anchor="middle" font-size="12" font-weight="700" fill="#27500A" font-family="system-ui">🟢  &gt; 30 cm</text>
+          <text x="135" y="83" text-anchor="middle" font-size="11" fill="#3B6D11" font-family="system-ui">LED apagado · Sin sonido</text>
+          <!-- Zona amarilla -->
+          <rect x="255" y="40" width="170" height="54" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.2"/>
+          <text x="340" y="64" text-anchor="middle" font-size="12" font-weight="700" fill="#633806" font-family="system-ui">🟡  10–30 cm</text>
+          <text x="340" y="83" text-anchor="middle" font-size="11" fill="#BA7517" font-family="system-ui">LED encendido · 1 pitido</text>
+          <!-- Zona roja -->
+          <rect x="440" y="40" width="210" height="54" rx="8" fill="#FCEBEB" stroke="#A32D2D" stroke-width="1.2"/>
+          <text x="545" y="64" text-anchor="middle" font-size="12" font-weight="700" fill="#791F1F" font-family="system-ui">🔴  &lt; 10 cm</text>
+          <text x="545" y="83" text-anchor="middle" font-size="11" fill="#A32D2D" font-family="system-ui">LED parpadeante · Alarma</text>
+          <!-- Regla distancia -->
+          <line x1="30" y1="112" x2="650" y2="112" stroke="#5F5E5A" stroke-width="1" marker-end="url(#arr2)"/>
+          <text x="30"  y="126" font-size="10" fill="#5F5E5A" font-family="system-ui">0 cm</text>
+          <text x="255" y="126" font-size="10" fill="#5F5E5A" font-family="system-ui">10 cm</text>
+          <text x="425" y="126" font-size="10" fill="#5F5E5A" font-family="system-ui">30 cm</text>
+          <text x="620" y="126" font-size="10" fill="#5F5E5A" font-family="system-ui" text-anchor="end">∞</text>
+          <line x1="255" y1="106" x2="255" y2="117" stroke="#5F5E5A" stroke-width="1"/>
+          <line x1="425" y1="106" x2="425" y2="117" stroke="#5F5E5A" stroke-width="1"/>
+        </svg>
+      </div>
+
+      <div class="code-wrap">
+<pre><span class="c-comment">// ─── Práctica HC-SR04 — Código completo ──────────────────────────</span>
+
+<span class="c-comment">// Pines</span>
+<span class="c-keyword">const int</span> <span class="c-const">TRIG</span>   = <span class="c-num">9</span>;
+<span class="c-keyword">const int</span> <span class="c-const">ECHO</span>   = <span class="c-num">10</span>;
+<span class="c-keyword">const int</span> <span class="c-const">LED</span>    = <span class="c-num">12</span>;
+<span class="c-keyword">const int</span> <span class="c-const">BUZZER</span> = <span class="c-num">11</span>;
+
+<span class="c-keyword">void</span> <span class="c-func">setup</span>() {
+  <span class="c-func">pinMode</span>(<span class="c-const">TRIG</span>,   OUTPUT);
+  <span class="c-func">pinMode</span>(<span class="c-const">ECHO</span>,   INPUT);
+  <span class="c-func">pinMode</span>(<span class="c-const">LED</span>,    OUTPUT);
+  <span class="c-func">pinMode</span>(<span class="c-const">BUZZER</span>, OUTPUT);
+  Serial.<span class="c-func">begin</span>(<span class="c-num">9600</span>);
+}
+
+<span class="c-keyword">void</span> <span class="c-func">loop</span>() {
+
+  <span class="c-comment">// ── 1. Leer el sensor ──────────────────────────────────</span>
+  <span class="c-func">digitalWrite</span>(<span class="c-const">TRIG</span>, LOW);
+  <span class="c-func">delayMicroseconds</span>(<span class="c-num">2</span>);
+  <span class="c-func">digitalWrite</span>(<span class="c-const">TRIG</span>, HIGH);
+  <span class="c-func">delayMicroseconds</span>(<span class="c-num">10</span>);
+  <span class="c-func">digitalWrite</span>(<span class="c-const">TRIG</span>, LOW);
+
+  <span class="c-type">long</span> duracion  = <span class="c-func">pulseIn</span>(<span class="c-const">ECHO</span>, HIGH);
+  <span class="c-type">long</span> distancia = duracion / <span class="c-num">58</span>;
+
+  Serial.<span class="c-func">print</span>(<span class="c-str">"Distancia: "</span>);
+  Serial.<span class="c-func">print</span>(distancia);
+  Serial.<span class="c-func">println</span>(<span class="c-str">" cm"</span>);
+
+  <span class="c-comment">// ── 2. Actuar según la distancia ──────────────────────</span>
+  <span class="c-keyword">if</span> (distancia > <span class="c-num">30</span>) {
+    <span class="c-comment">// 🟢 ZONA SEGURA: todo apagado</span>
+    <span class="c-func">digitalWrite</span>(<span class="c-const">LED</span>,    LOW);
+    <span class="c-func">digitalWrite</span>(<span class="c-const">BUZZER</span>, LOW);
+
+  } <span class="c-keyword">else if</span> (distancia > <span class="c-num">10</span>) {
+    <span class="c-comment">// 🟡 ZONA ATENCIÓN: LED encendido, 1 pitido corto</span>
+    <span class="c-func">digitalWrite</span>(<span class="c-const">LED</span>,    HIGH);
+    <span class="c-func">digitalWrite</span>(<span class="c-const">BUZZER</span>, HIGH);
+    <span class="c-func">delay</span>(<span class="c-num">50</span>);
+    <span class="c-func">digitalWrite</span>(<span class="c-const">BUZZER</span>, LOW);
+
+  } <span class="c-keyword">else</span> {
+    <span class="c-comment">// 🔴 ZONA PELIGRO: LED parpadeante + alarma continua</span>
+    <span class="c-func">digitalWrite</span>(<span class="c-const">LED</span>,    HIGH);
+    <span class="c-func">digitalWrite</span>(<span class="c-const">BUZZER</span>, HIGH);
+    <span class="c-func">delay</span>(<span class="c-num">100</span>);
+    <span class="c-func">digitalWrite</span>(<span class="c-const">LED</span>,    LOW);
+    <span class="c-func">digitalWrite</span>(<span class="c-const">BUZZER</span>, LOW);
+    <span class="c-func">delay</span>(<span class="c-num">100</span>);
+  }
+
+  <span class="c-func">delay</span>(<span class="c-num">100</span>);
+}</pre>
+      </div>
+
+      <div class="instructions">
+        <div class="instr">
+          <div class="instr-num">1</div>
+          <div>Sube este código a Arduino. El comportamiento debería cambiar al acercar y alejar la mano del sensor.</div>
+        </div>
+        <div class="instr">
+          <div class="instr-num">2</div>
+          <div>Observa en el Monitor Serie los valores de distancia mientras pruebas las tres zonas.</div>
+        </div>
+        <div class="instr">
+          <div class="instr-num">3</div>
+          <div>Si el buzzer suena sin parar, revisa que el pin + del buzzer está en el pin 11 y el − en GND.</div>
+        </div>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn btn-sec" onclick="goStep(2)">← Anterior</button>
+        <button class="btn btn-prim" onclick="goStep(4)">Siguiente →</button>
+      </div>
+    </div>
+
+    <!-- ═══ PASO 5 ═══ -->
+    <div class="step-panel" id="panel-4">
+      <div class="step-header">
+        <div class="step-num">5</div>
+        <div>
+          <div class="step-title">Verificación y prueba</div>
+          <div class="step-sub">Comprueba que todo funciona correctamente</div>
+        </div>
+      </div>
+
+      <p style="margin-bottom: 14px; color: var(--txt2); font-size:14px;">Marca cada punto una vez que lo hayas comprobado:</p>
+
+      <div class="verify-list" id="verifyList">
+        <div class="verify-item" onclick="toggleVerify(this)">
+          <div class="verify-cb"></div>
+          <div class="verify-text">El Monitor Serie muestra valores de distancia que cambian al acercar/alejar la mano.</div>
+        </div>
+        <div class="verify-item" onclick="toggleVerify(this)">
+          <div class="verify-cb"></div>
+          <div class="verify-text">Con la mano a más de 30 cm: LED apagado y buzzer en silencio.</div>
+        </div>
+        <div class="verify-item" onclick="toggleVerify(this)">
+          <div class="verify-cb"></div>
+          <div class="verify-text">Con la mano entre 10 y 30 cm: LED encendido fijo y buzzer da un pitido corto.</div>
+        </div>
+        <div class="verify-item" onclick="toggleVerify(this)">
+          <div class="verify-cb"></div>
+          <div class="verify-text">Con la mano a menos de 10 cm: LED parpadea y buzzer suena de forma intermitente.</div>
+        </div>
+        <div class="verify-item" onclick="toggleVerify(this)">
+          <div class="verify-cb"></div>
+          <div class="verify-text">Los valores de distancia son coherentes (no salen valores de 0 o 400 cm sin motivo).</div>
+        </div>
+      </div>
+
+      <div id="verifyOk" style="display:none" class="alert ok" style="margin-top:14px">
+        <div class="alert-icon">🎉</div>
+        <p><strong>¡Práctica completada!</strong> Todos los puntos verificados. Pasa al paso de ampliación para seguir practicando.</p>
+      </div>
+
+      <div class="alert rojo" style="margin-top:14px">
+        <div class="alert-icon">🔍</div>
+        <p><strong>¿Algo no funciona?</strong> Repasa este listado:</p>
+        <ul style="margin-top:6px; padding-left:18px; font-size:13px; line-height:1.8">
+          <li>El LED no enciende → revisa la resistencia de 220Ω y la polaridad del LED (pata larga = +).</li>
+          <li>El buzzer no suena → comprueba que el + del buzzer va al Pin 11 (no al GND).</li>
+          <li>La distancia siempre da 0 → probablemente ECHO y TRIG están intercambiados.</li>
+          <li>La distancia siempre da 400+ cm → asegúrate de que VCC del sensor va a 5V, no a 3.3V.</li>
+        </ul>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn btn-sec" onclick="goStep(3)">← Anterior</button>
+        <button class="btn btn-prim" onclick="goStep(5)">Ampliación →</button>
+      </div>
+    </div>
+
+    <!-- ═══ PASO 6 ═══ -->
+    <div class="step-panel" id="panel-5">
+      <div class="step-header">
+        <div class="step-num">6</div>
+        <div>
+          <div class="step-title">Ampliación y retos</div>
+          <div class="step-sub">Para quienes quieran ir más lejos</div>
+        </div>
+      </div>
+
+      <div class="alert ok">
+        <div class="alert-icon">🏆</div>
+        <p><strong>¡Enhorabuena!</strong> Has completado la práctica básica. Ahora puedes intentar alguno de estos retos para profundizar.</p>
+      </div>
+
+      <div class="amp-grid">
+        <div class="amp-card">
+          <h4>⭐ Reto 1 — Múltiples LEDs</h4>
+          <p>Añade un LED verde y uno amarillo. El verde se enciende en zona segura, el amarillo en zona atención y el rojo en zona peligro. Necesitarás dos pines más y dos resistencias.</p>
+        </div>
+        <div class="amp-card">
+          <h4>⭐⭐ Reto 2 — Velocidad de pitido variable</h4>
+          <p>En zona amarilla, usa <code>delay()</code> para que el buzzer pite más deprisa cuanto más cerca esté el objeto. Pista: calcula el delay en función de la distancia con <code>map()</code>.</p>
+        </div>
+        <div class="amp-card">
+          <h4>⭐⭐ Reto 3 — Mostrar en LCD</h4>
+          <p>Si tienes una pantalla LCD I2C disponible, muestra la distancia en centímetros y el estado (SEGURO / ATENCIÓN / PELIGRO) en la pantalla en lugar del Monitor Serie.</p>
+        </div>
+        <div class="amp-card">
+          <h4>⭐⭐⭐ Reto 4 — Aparcamiento inteligente</h4>
+          <p>Simula un sensor de aparcamiento: 5 LEDs en línea que se van apagando a medida que el coche se acerca. El último LED y el buzzer se activan cuando la distancia es inferior a 5 cm.</p>
+        </div>
+      </div>
+
+      <div class="section" style="margin-top:24px">
+        <div class="section-title">Preguntas de reflexión</div>
+        <div class="obj-list">
+          <div class="obj-item">
+            <div class="obj-icon azul">?</div>
+            <div>¿Por qué usamos <code>long</code> en vez de <code>int</code> para guardar la duración del pulso?</div>
+          </div>
+          <div class="obj-item">
+            <div class="obj-icon azul">?</div>
+            <div>¿Por qué dividimos la duración entre 58 para obtener centímetros? Busca de dónde sale este número.</div>
+          </div>
+          <div class="obj-item">
+            <div class="obj-icon azul">?</div>
+            <div>¿Qué pasa si hay dos objetos frente al sensor al mismo tiempo? ¿Cuál mide?</div>
+          </div>
+          <div class="obj-item">
+            <div class="obj-icon verde">💡</div>
+            <div>¿En qué aplicaciones de la vida real se usan sensores de ultrasonidos? Nombra al menos tres.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step-footer">
+        <button class="btn btn-sec" onclick="goStep(4)">← Anterior</button>
+        <button class="btn btn-prim" style="background:var(--verde-b);border-color:var(--verde-b)" disabled>✅ Práctica finalizada</button>
+      </div>
+    </div>
+
+  </div><!-- /stepper -->
+</div><!-- /container -->
+
+<script>
+  let current = 0;
+  const total = 6;
+
+  function goStep(n) {
+    document.getElementById('panel-' + current).classList.remove('active');
+    const btns = document.querySelectorAll('.step-btn');
+    btns[current].classList.remove('active');
+    if (n > current) btns[current].classList.add('done');
+
+    current = n;
+    document.getElementById('panel-' + current).classList.add('active');
+    btns[current].classList.add('active');
+    btns[current].classList.remove('done');
+
+    const pct = Math.round(((current + 1) / total) * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function toggleVerify(el) {
+    el.classList.toggle('checked');
+    const check = el.querySelector('.verify-cb');
+    check.textContent = el.classList.contains('checked') ? '✓' : '';
+
+    const all = document.querySelectorAll('#verifyList .verify-item');
+    const done = document.querySelectorAll('#verifyList .verify-item.checked');
+    document.getElementById('verifyOk').style.display = (done.length === all.length) ? 'flex' : 'none';
+  }
+</script>
+</body>
+</html>
